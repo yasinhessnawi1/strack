@@ -1,10 +1,62 @@
 import { Footer } from '@/components/blocks/footer';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { Metadata } from 'next';
+import { StructuredData } from '@/components/seo/structured-data';
+
+export const metadata: Metadata = {
+  title: "Privacy Policy",
+  description: "STrack's Privacy Policy. Learn how we collect, use, and protect your data. GDPR & CCPA compliant.",
+  keywords: ["privacy policy", "data protection", "GDPR", "CCPA", "data security"],
+  alternates: {
+    canonical: "/privacy"
+  }
+}
+
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What personal data does STrack collect?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "We collect information you provide directly: name, email, payment details (via Stripe), and your subscription tracking data. We don't sell your data to third parties."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is my subscription data encrypted?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes, all data is encrypted in transit using HTTPS and at rest in our Firebase database. We follow industry-standard security practices."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I delete my account and data?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes, you can request account deletion at any time. All your data will be permanently deleted within 30 days."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does STrack comply with GDPR and CCPA?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes, we are fully compliant with GDPR and CCPA regulations. You have the right to access, correct, delete, or port your data."
+      }
+    }
+  ]
+}
 
 export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <StructuredData data={faqSchema} />
+      
       <header className="px-6 py-4 border-b bg-background/50 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">

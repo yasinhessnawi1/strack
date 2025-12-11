@@ -1,4 +1,19 @@
 import { PricingTable } from '@clerk/nextjs'
+import { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: "Pricing - Simple & Transparent Plans",
+  description: "Choose the perfect STrack plan for you. Start free with 5 subscriptions or upgrade to Pro for unlimited tracking. No hidden fees, cancel anytime.",
+  keywords: ["subscription tracker pricing", "free subscription manager", "subscription app cost", "pro plan"],
+  alternates: {
+    canonical: "/pricing"
+  },
+  openGraph: {
+    title: "STrack Pricing - Free & Pro Plans",
+    description: "Start free or upgrade to Pro for unlimited subscription tracking.",
+    url: "/pricing",
+  }
+}
 
 export default function PricingPage() {
   return (

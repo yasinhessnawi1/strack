@@ -207,8 +207,8 @@ function DashboardContent() {
           </Link>
 
           <div className="flex items-center gap-4">
-            <button className="relative p-2 rounded-full hover:bg-white/10 transition-colors text-muted-foreground hover:text-foreground">
-                <Bell className="size-5" />
+            <button className="relative p-2 rounded-full hover:bg-white/10 transition-colors text-muted-foreground hover:text-foreground" aria-label="Notifications coming soon" title="Notifications coming soon">
+                <Bell className="size-5"/>
                 <span className="absolute top-1.5 right-1.5 size-2 bg-red-500 rounded-full animate-pulse" />
             </button>
             <span className="text-sm text-muted-foreground hidden sm:block">
@@ -231,7 +231,7 @@ function DashboardContent() {
               <Input
                 value={quickPasteUrl}
                 onChange={(e) => setQuickPasteUrl(e.target.value)}
-                placeholder={isLimitReached ? "Limit reached (5/5). Upgrade to add more." : "Paste any subscription link here..."}
+                placeholder={isLimitReached ? "Limit reached (5/5). Upgrade to add more." : "URL, service name, or custom (e.g., 'spotify', 'gym $50/month')..."}
                 className="pr-12"
                 disabled={isLimitReached}
                 onKeyDown={(e) => e.key === 'Enter' && !isLimitReached && handleQuickPaste()}
@@ -245,7 +245,7 @@ function DashboardContent() {
               {parsingUrl ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : (
-                'Parse & Add'
+                'Add'
               )}
             </Button>
           </div>

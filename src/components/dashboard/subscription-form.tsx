@@ -43,7 +43,10 @@ interface ParsedSubscriptionData {
   logoUrl?: string;
   cancelUrl?: string;
   manageUrl?: string;
+  category?: string;
+  notes?: string;
   requiresManualInput: string[];
+  isCustomSubscription?: boolean;
 }
 
 export function SubscriptionForm({
@@ -64,8 +67,8 @@ export function SubscriptionForm({
     startDate: subscription?.startDate?.split('T')[0] || new Date().toISOString().split('T')[0],
     cancelUrl: subscription?.cancelUrl || parsedData?.cancelUrl || '',
     manageUrl: subscription?.manageUrl || parsedData?.manageUrl || '',
-    category: subscription?.category || '',
-    notes: subscription?.notes || '',
+    category: subscription?.category || parsedData?.category || '',
+    notes: subscription?.notes || parsedData?.notes || '',
   });
 
   // Update form data when props change
@@ -80,8 +83,8 @@ export function SubscriptionForm({
         startDate: subscription?.startDate?.split('T')[0] || new Date().toISOString().split('T')[0],
         cancelUrl: subscription?.cancelUrl || parsedData?.cancelUrl || '',
         manageUrl: subscription?.manageUrl || parsedData?.manageUrl || '',
-        category: subscription?.category || '',
-        notes: subscription?.notes || '',
+        category: subscription?.category || parsedData?.category || '',
+        notes: subscription?.notes || parsedData?.notes || '',
       });
     }
   }, [subscription, parsedData, initialUrl, open]);

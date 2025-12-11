@@ -1,10 +1,53 @@
 import { Footer } from '@/components/blocks/footer';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { Metadata } from 'next';
+import { StructuredData } from '@/components/seo/structured-data';
+
+export const metadata: Metadata = {
+  title: "Terms of Service",
+  description: "Read STrack's Terms of Service. Understand your rights and obligations when using our subscription tracking platform.",
+  alternates: {
+    canonical: "/terms"
+  }
+}
+
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is STrack's refund policy?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Pro plan subscriptions can be canceled at any time. We offer pro-rated refunds for annual plans within the first 30 days."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I cancel my Pro subscription anytime?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes, you can cancel your Pro subscription at any time. Your subscription will remain active until the end of your current billing period."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What happens to my data if I cancel?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Your data remains accessible for 30 days after cancellation. After that, it will be permanently deleted unless you reactivate your account."
+      }
+    }
+  ]
+}
 
 export default function TermsPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <StructuredData data={faqSchema} />
+      
       <header className="px-6 py-4 border-b bg-background/50 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
