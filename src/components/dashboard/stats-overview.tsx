@@ -107,6 +107,11 @@ export function StatsOverview({
     },
   ];
 
+  const StatIcon0 = stats[0].icon;
+  const StatIcon1 = stats[1].icon;
+  const StatIcon2 = stats[2].icon;
+  const StatIcon3 = stats[3].icon;
+
   return (
     <MagicBento 
       className="grid grid-cols-1 md:grid-cols-4 gap-4 w-full"
@@ -131,7 +136,7 @@ export function StatsOverview({
          <div className="z-10 relative">
             <div className="flex items-center justify-between mb-2">
               <div className={cn("size-8 rounded-lg flex items-center justify-center", stats[0].bg, stats[0].color)}>
-                <stats[0].icon className="size-4" />
+                <StatIcon0 className="size-4" />
               </div>
             </div>
             <div className="space-y-0.5">
@@ -149,7 +154,7 @@ export function StatsOverview({
          <div className="z-10 relative">
             <div className="flex items-center justify-between mb-2">
               <div className={cn("size-8 rounded-lg flex items-center justify-center", stats[1].bg, stats[1].color)}>
-                <stats[1].icon className="size-4" />
+                <StatIcon1 className="size-4" />
               </div>
             </div>
             <div className="space-y-0.5">
@@ -231,7 +236,7 @@ export function StatsOverview({
       </ParticleCard>
 
       {/* 4. Spending Trend (Big - Left Side Bottom) */}
-      <ParticleCard className="col-span-1 md:col-span-2 magic-bento-card min-h-[320px] bg-white/5 border-white/10 order-4 md:order-4">
+      <ParticleCard className="col-span-1 md:col-span-2 md:row-span-2 magic-bento-card min-h-[320px] bg-white/5 border-white/10 order-4 md:order-4">
         <div className="flex flex-col h-full z-10 relative">
             <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-white flex items-center gap-2">
@@ -286,7 +291,7 @@ export function StatsOverview({
          <div className="z-10 relative">
             <div className="flex items-center justify-between mb-2">
               <div className={cn("size-8 rounded-lg flex items-center justify-center", stats[2].bg, stats[2].color)}>
-                <stats[2].icon className="size-4" />
+                <StatIcon2 className="size-4" />
               </div>
             </div>
             <div className="space-y-0.5">
@@ -304,7 +309,7 @@ export function StatsOverview({
          <div className="z-10 relative">
             <div className="flex items-center justify-between mb-2">
               <div className={cn("size-8 rounded-lg flex items-center justify-center", stats[3].bg, stats[3].color)}>
-                <stats[3].icon className="size-4" />
+                <StatIcon3 className="size-4" />
               </div>
             </div>
             <div className="space-y-0.5">

@@ -502,15 +502,13 @@ export const MagicBento = ({
         {React.Children.map(children, (child) => {
           if (!React.isValidElement(child)) return child;
           
-          // Inject props into MagicBentoCard children if necessary, 
-          // or just wrap them. Since we are refactoring, let's assume children ARE ParticleCards 
-          // or we wrap them here if needed. 
-          // The provided example had logic inside MagicBento to map cardData. 
-          // We changed it to children. 
-          
-          // Let's pass the context-like props to children if they are ParticleCards
-          // For now, we assume the user uses MagicBentoCard (exported as ParticleCard) directly.
-          return child;
+          return React.cloneElement(child as React.ReactElement<any>, {
+            enableTilt,
+            enableMagnetism,
+            clickEffect,
+            glowColor: (child.props as any).glowColor || glowColor, // Keep child's glow if set
+            disableAnimations: shouldDisableAnimations,
+          });
         })}
       </BentoCardGrid>
     </>

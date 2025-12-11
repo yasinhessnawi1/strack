@@ -14,6 +14,7 @@ import { Plus, Search, Link2, CreditCard, Loader2, Bell } from 'lucide-react';
 import Link from 'next/link';
 import { Logo } from '@/components/ui/logo';
 import { DashboardBackground } from '@/components/ui/dashboard-background';
+import { cn } from '@/lib/utils';
 
 interface SubscriptionFormData {
   name: string;
@@ -61,6 +62,9 @@ function DashboardContent() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 9;
 
+  const [isPro, setIsPro] = useState(false);
+  const FREE_LIMIT = 5;
+
   const fetchSubscriptions = useCallback(async () => {
     try {
       const response = await fetch('/api/subscriptions?includeStats=true');
@@ -68,6 +72,7 @@ function DashboardContent() {
         const data = await response.json();
         setSubscriptions(data.subscriptions);
         setStats(data.stats);
+        setIsPro(!!data.isPro);
       }
     } catch (error) {
       console.error('Error fetching subscriptions:', error);
@@ -180,6 +185,8 @@ function DashboardContent() {
     currentPage * itemsPerPage
   );
 
+  const isLimitReached = !isPro && subscriptions.length >= FREE_LIMIT;
+
   if (!isLoaded || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -224,14 +231,15 @@ function DashboardContent() {
               <Input
                 value={quickPasteUrl}
                 onChange={(e) => setQuickPasteUrl(e.target.value)}
-                placeholder="Paste any subscription link here..."
+                placeholder={isLimitReached ? "Limit reached (5/5). Upgrade to add more." : "Paste any subscription link here..."}
                 className="pr-12"
-                onKeyDown={(e) => e.key === 'Enter' && handleQuickPaste()}
+                disabled={isLimitReached}
+                onKeyDown={(e) => e.key === 'Enter' && !isLimitReached && handleQuickPaste()}
               />
             </div>
             <Button
               onClick={() => handleQuickPaste()}
-              disabled={parsingUrl || !quickPasteUrl}
+              disabled={parsingUrl || !quickPasteUrl || isLimitReached}
               className="rounded-[0.5rem] bg-indigo-500/80 hover:bg-indigo-500/90 text-white shadow-[0_8px_30px_rgb(0,0,0,0.12)] backdrop-blur-md border border-white/20 transition-all duration-300 hover:shadow-[0_8px_30px_rgb(99,102,241,0.2)]"
             >
               {parsingUrl ? (
@@ -243,24 +251,30 @@ function DashboardContent() {
           </div>
         </div>
 
-        {/* Stats */}
+        {/* Stats Overview */}
         {stats && (
-          {/* Stats Overview */}
-        <StatsOverview
-          totalMonthly={totalMonthlyCost}
-          totalYearly={totalYearlyCost}
-          count={subscriptions.length}
-          upcomingCount={upcomingSubscriptions.length}
-          subscriptions={subscriptions}
-        />
+          <div className="mb-12">
+            <StatsOverview
+              totalMonthly={stats.totalMonthly}
+              totalYearly={stats.totalYearly}
+              count={stats.count}
+              upcomingCount={stats.upcomingPayments.length}
+              subscriptions={subscriptions}
+            />
+          </div>
         )}
 
         {/* Subscriptions Section */}
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
             <h2 className="text-2xl font-bold">Your Subscriptions</h2>
-            <div className="flex gap-3 w-full sm:w-auto">
-              <div className="relative flex-1 sm:w-64">
+            <div className="flex gap-3 w-full sm:w-auto items-center">
+               {!isPro && (
+                  <span className="text-xs text-muted-foreground mr-2 font-medium">
+                    {subscriptions.length} / {FREE_LIMIT} Free
+                  </span>
+               )}
+               <div className="relative flex-1 sm:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                 <Input
                   value={searchQuery}
@@ -268,17 +282,28 @@ function DashboardContent() {
                   placeholder="Search subscriptions..."
                   className="pl-10"
                 />
-              </div>
+               </div>
               <Button
                 onClick={() => {
+                  if (isLimitReached) {
+                     window.location.href = '/pricing';
+                     return;
+                  }
                   setEditingSubscription(null);
                   setParsedData(null);
                   setFormOpen(true);
                 }}
-                className="rounded-[0.5rem] bg-indigo-500/80 hover:bg-indigo-500/90 text-white shadow-[0_8px_30px_rgb(0,0,0,0.12)] backdrop-blur-md border border-white/20 transition-all duration-300 hover:shadow-[0_8px_30px_rgb(99,102,241,0.2)]"
+                disabled={isLimitReached && !isPro} 
+                className={cn(
+                  "rounded-[0.5rem] bg-indigo-500/80 hover:bg-indigo-500/90 text-white shadow-[0_8px_30px_rgb(0,0,0,0.12)] backdrop-blur-md border border-white/20 transition-all duration-300 hover:shadow-[0_8px_30px_rgb(99,102,241,0.2)]",
+                  isLimitReached && "opacity-80 hover:bg-indigo-500/80"
+                )}
               >
-                <Plus className="size-4 mr-2" />
-                Add
+                {isLimitReached ? (
+                   <span className="flex items-center"><Link2 className="size-4 mr-2"/> Upgrade</span>
+                ) : (
+                   <span className="flex items-center"><Plus className="size-4 mr-2"/> Add</span>
+                )}
               </Button>
             </div>
           </div>

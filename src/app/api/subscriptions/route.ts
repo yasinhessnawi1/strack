@@ -21,7 +21,12 @@ export async function GET(request: NextRequest) {
     if (includeStats) {
       const stats = await getSubscriptionStats(userId);
       const subscriptions = await getUserSubscriptions(userId);
-      return NextResponse.json({ subscriptions, stats });
+      
+      // Check Plan Status
+      const { has } = await auth();
+      const isPro = has({ plan: 'unlimited' }) || has({ plan: 'pro' });
+
+      return NextResponse.json({ subscriptions, stats, isPro });
     }
 
     const subscriptions = await getUserSubscriptions(userId);
@@ -44,6 +49,22 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json() as Partial<SubscriptionFormData>;
+
+    // LIMIT CHECK: Enforce 5 subscriptions for Free Plan
+    // We check if the user has the 'unlimited' plan
+    // Note: User must create a Plan in Clerk Dashboard with slug 'unlimited' (or similar)
+    const { has } = await auth();
+    const isPro = has({ plan: 'unlimited' }) || has({ plan: 'pro' }); // Support common names
+    
+    if (!isPro) {
+      const currentSubs = await getUserSubscriptions(userId);
+      if (currentSubs.length >= 5) {
+         return NextResponse.json(
+           { error: 'Free plan limit reached (5 subscriptions). Upgrade for unlimited access.' },
+           { status: 403 }
+         );
+      }
+    }
     
     // Validate request strictly for Name
     if (!body.name) {
