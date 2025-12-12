@@ -45,6 +45,8 @@ interface Stats {
   totalYearly: number;
   count: number;
   upcomingPayments: Subscription[];
+  displayCurrency?: string;
+  exchangeRates?: Record<string, number>;
 }
 
 function DashboardContent() {
@@ -65,13 +67,42 @@ function DashboardContent() {
   const [isPro, setIsPro] = useState(false);
   const FREE_LIMIT = 5;
 
-  const fetchSubscriptions = useCallback(async () => {
+  // Display currency state
+  const [displayCurrency, setDisplayCurrency] = useState('USD');
+  const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
+
+  // Fetch user's currency preference on mount
+  useEffect(() => {
+    const fetchPreferences = async () => {
+      try {
+        const response = await fetch('/api/user/preferences');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.preferences?.displayCurrency) {
+            setDisplayCurrency(data.preferences.displayCurrency);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching preferences:', error);
+      } finally {
+        setPreferencesLoaded(true);
+      }
+    };
+
+    if (isLoaded && user) {
+      fetchPreferences();
+    }
+  }, [isLoaded, user]);
+
+  const fetchSubscriptions = useCallback(async (currency: string = displayCurrency) => {
     try {
-      const response = await fetch('/api/subscriptions?includeStats=true');
+      const response = await fetch(`/api/subscriptions?includeStats=true&displayCurrency=${currency}`);
       if (response.ok) {
         const data = await response.json();
         setSubscriptions(data.subscriptions);
         setStats(data.stats);
+        setExchangeRates(data.exchangeRates || {});
         setIsPro(!!data.isPro);
       }
     } catch (error) {
@@ -79,13 +110,29 @@ function DashboardContent() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [displayCurrency]);
+
+  // Handle currency change
+  const handleCurrencyChange = useCallback(async (newCurrency: string) => {
+    setDisplayCurrency(newCurrency);
+    setLoading(true);
+
+    // Fetch new stats with the new currency
+    await fetchSubscriptions(newCurrency);
+
+    // Save preference to backend (don't await - fire and forget)
+    fetch('/api/user/preferences', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ displayCurrency: newCurrency }),
+    }).catch(err => console.error('Error saving currency preference:', err));
+  }, [fetchSubscriptions]);
 
   useEffect(() => {
-    if (isLoaded && user) {
-      fetchSubscriptions();
+    if (isLoaded && user && preferencesLoaded) {
+      fetchSubscriptions(displayCurrency);
     }
-  }, [isLoaded, user, fetchSubscriptions]);
+  }, [isLoaded, user, preferencesLoaded, displayCurrency, fetchSubscriptions]);
 
   // Check for URL parameter from landing page
   useEffect(() => {
@@ -203,7 +250,7 @@ function DashboardContent() {
       <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <Logo />
+            <Logo animated={false} />
           </Link>
 
           <div className="flex items-center gap-4">
@@ -260,6 +307,9 @@ function DashboardContent() {
               count={stats.count}
               upcomingCount={stats.upcomingPayments.length}
               subscriptions={subscriptions}
+              currency={displayCurrency}
+              exchangeRates={exchangeRates}
+              onCurrencyChange={handleCurrencyChange}
             />
           </div>
         )}
@@ -380,12 +430,14 @@ function DashboardContent() {
           if (!open) {
             setEditingSubscription(null);
             setParsedData(null);
+            setQuickPasteUrl('');
           }
         }}
         subscription={editingSubscription}
         onSubmit={handleSubmit}
         initialUrl={quickPasteUrl}
         parsedData={parsedData || undefined}
+        defaultCurrency={displayCurrency}
       />
       
       <DeleteConfirmationDialog

@@ -1,6 +1,7 @@
 import { getAdminDb } from '@/lib/firebase';
 import { Subscription, SubscriptionFormData } from '@/models/subscription';
 import { addMonths, addWeeks, addYears, addQuarters } from 'date-fns';
+import { getExchangeRates, convertAmount } from '@/lib/currency';
 
 const SUBSCRIPTIONS_COLLECTION = 'subscriptions';
 
@@ -159,36 +160,60 @@ export async function deleteSubscription(id: string, userId: string): Promise<bo
 }
 
 /**
- * Get subscription statistics for a user
+ * Get subscription statistics for a user with currency conversion
+ * @param userId - The user ID
+ * @param displayCurrency - The currency to display stats in (default: USD)
  */
-export async function getSubscriptionStats(userId: string): Promise<{
+export async function getSubscriptionStats(
+  userId: string,
+  displayCurrency: string = 'USD'
+): Promise<{
   totalMonthly: number;
   totalYearly: number;
   count: number;
   upcomingPayments: Subscription[];
+  displayCurrency: string;
+  exchangeRates: Record<string, number>;
 }> {
   const subscriptions = await getUserSubscriptions(userId);
+
+  // Fetch exchange rates for the display currency
+  // We fetch rates with displayCurrency as base, so 1 displayCurrency = X other currencies
+  // This means to convert FROM another currency TO displayCurrency, we divide by the rate
+  const rates = await getExchangeRates(displayCurrency);
 
   let totalMonthly = 0;
   const now = new Date();
   const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
   for (const sub of subscriptions) {
-    // Normalize all costs to monthly
+    // First, normalize cost to monthly based on billing cycle
+    let monthlyCost = sub.cost;
     switch (sub.billingCycle) {
       case 'weekly':
-        totalMonthly += sub.cost * 4.33;
+        monthlyCost = sub.cost * 4.33;
         break;
       case 'monthly':
-        totalMonthly += sub.cost;
+        monthlyCost = sub.cost;
         break;
       case 'quarterly':
-        totalMonthly += sub.cost / 3;
+        monthlyCost = sub.cost / 3;
         break;
       case 'yearly':
-        totalMonthly += sub.cost / 12;
+        monthlyCost = sub.cost / 12;
         break;
     }
+
+    // Then convert to display currency
+    const convertedCost = convertAmount(
+      monthlyCost,
+      sub.currency || 'USD',
+      displayCurrency,
+      rates,
+      displayCurrency
+    );
+
+    totalMonthly += convertedCost;
   }
 
   const upcomingPayments = subscriptions
@@ -200,5 +225,7 @@ export async function getSubscriptionStats(userId: string): Promise<{
     totalYearly: Math.round(totalMonthly * 12 * 100) / 100,
     count: subscriptions.length,
     upcomingPayments,
+    displayCurrency,
+    exchangeRates: rates,
   };
 }

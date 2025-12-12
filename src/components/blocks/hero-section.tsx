@@ -72,9 +72,9 @@ export function HeroSection() {
                                         <Link2 className="pointer-events-none absolute inset-y-0 left-4 my-auto size-5 text-muted-foreground" />
 
                                         <input
-                                            placeholder="Paste your subscription link here..."
+                                            placeholder="Paste a link or enter a service name..."
                                             className="h-14 w-full bg-transparent pl-12 focus:outline-none text-base"
-                                            type="url"
+                                            type="text"
                                             name="url"
                                         />
 

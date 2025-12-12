@@ -10,23 +10,30 @@ import { SubscriptionFormData } from '@/models/subscription';
 export async function GET(request: NextRequest) {
   try {
     const { userId } = await auth();
-    
+
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
     const includeStats = searchParams.get('includeStats') === 'true';
+    const displayCurrency = searchParams.get('displayCurrency') || 'USD';
 
     if (includeStats) {
-      const stats = await getSubscriptionStats(userId);
+      const stats = await getSubscriptionStats(userId, displayCurrency.toUpperCase());
       const subscriptions = await getUserSubscriptions(userId);
-      
+
       // Check Plan Status
       const { has } = await auth();
       const isPro = has({ plan: 'unlimited' }) || has({ plan: 'pro' });
 
-      return NextResponse.json({ subscriptions, stats, isPro });
+      return NextResponse.json({
+        subscriptions,
+        stats,
+        exchangeRates: stats.exchangeRates,
+        displayCurrency: stats.displayCurrency,
+        isPro
+      });
     }
 
     const subscriptions = await getUserSubscriptions(userId);

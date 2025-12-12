@@ -1,9 +1,10 @@
-import { TrendingUp, CreditCard, Calendar, DollarSign, Activity, BarChart3, PieChart as PieChartIcon } from 'lucide-react';
+import { TrendingUp, CreditCard, Calendar, DollarSign, Activity, BarChart3, Globe } from 'lucide-react';
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis, BarChart, Bar, Cell } from 'recharts';
 import { MagicBento, ParticleCard } from '@/components/ui/magic-bento';
 import { cn } from '@/lib/utils';
-import { Subscription } from '@/models/subscription';
-import { addMonths, format } from 'date-fns';
+import { Subscription, CURRENCIES } from '@/models/subscription';
+import { format } from 'date-fns';
+import { convertAmount } from '@/lib/currency';
 
 interface StatsOverviewProps {
   totalMonthly: number;
@@ -12,59 +13,95 @@ interface StatsOverviewProps {
   upcomingCount: number;
   currency?: string;
   subscriptions: Subscription[];
+  exchangeRates?: Record<string, number>;
+  onCurrencyChange?: (currency: string) => void;
 }
 
-export function StatsOverview({ 
-  totalMonthly, 
-  totalYearly, 
-  count, 
+export function StatsOverview({
+  totalMonthly,
+  totalYearly,
+  count,
   upcomingCount,
   currency = 'USD',
-  subscriptions
+  subscriptions,
+  exchangeRates = {},
+  onCurrencyChange
 }: StatsOverviewProps) {
+
+  // Get currency info for display
+  const currencyInfo = CURRENCIES.find(c => c.value === currency) || CURRENCIES[0];
   
-  // 1. Calculate Category Spend (Real Data)
+  // Helper to normalize cost to monthly
+  const normalizeMonthlyCost = (cost: number, billingCycle: string) => {
+    switch (billingCycle) {
+      case 'yearly': return cost / 12;
+      case 'quarterly': return cost / 3;
+      case 'weekly': return cost * 4.33;
+      default: return cost;
+    }
+  };
+
+  // Helper to convert subscription cost to display currency
+  const convertSubCost = (sub: Subscription, monthlyCost: number) => {
+    if (Object.keys(exchangeRates).length === 0 || sub.currency === currency) {
+      return monthlyCost;
+    }
+    return convertAmount(monthlyCost, sub.currency || 'USD', currency, exchangeRates, currency);
+  };
+
+  // 1. Calculate Category Spend (Real Data) with currency conversion
   const categorySpend = subscriptions.reduce((acc, sub) => {
     const cat = sub.category || 'Other';
-    // Normalize to monthly cost for fair comparison
-    const monthlyCost = sub.billingCycle === 'yearly' ? sub.cost / 12 : sub.cost;
-    acc[cat] = (acc[cat] || 0) + monthlyCost;
+    const monthlyCost = normalizeMonthlyCost(sub.cost, sub.billingCycle);
+    const convertedCost = convertSubCost(sub, monthlyCost);
+    acc[cat] = (acc[cat] || 0) + convertedCost;
     return acc;
   }, {} as Record<string, number>);
 
   const barChartData = Object.entries(categorySpend)
-    .map(([name, value]) => ({ name, value }))
+    .map(([name, value]) => ({ name, value: Math.round(value * 100) / 100 }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 5); // Top 5 categories
 
-  // 2. Calculate Spending Trend (Projected Future Payments for next 6 months)
-  const next6Months = Array.from({ length: 6 }, (_, i) => addMonths(new Date(), i));
-  
-  const areaChartData = next6Months.map(date => {
+  // 2. Calculate Historical Cumulative MRR Growth with currency conversion
+  const now = new Date();
+  const earliestStart = subscriptions.length > 0
+    ? subscriptions.reduce((earliest, sub) => {
+        const subStart = new Date(sub.startDate);
+        return subStart < earliest ? subStart : earliest;
+      }, new Date(subscriptions[0].startDate))
+    : now;
+
+  // Generate months from earliest start to current month
+  const monthsDiff = (now.getFullYear() - earliestStart.getFullYear()) * 12
+    + (now.getMonth() - earliestStart.getMonth()) + 1;
+
+  // Create month start dates for proper comparison
+  const historicalMonths = Array.from({ length: Math.max(monthsDiff, 6) }, (_, i) => {
+    const date = new Date(earliestStart);
+    date.setMonth(earliestStart.getMonth() + i);
+    date.setDate(1);
+    return date;
+  });
+
+  // Calculate cumulative MRR for each month with currency conversion
+  const areaChartData = historicalMonths.map(date => {
     const monthName = format(date, 'MMM');
+
     const monthTotal = subscriptions.reduce((sum, sub) => {
-      // Simple projection: 
-      // Monthly subs count every month. 
-      // Yearly subs count only if their nextPaymentDate falls in this month (simplified logic)
-      
-      // For accurate projection, we'd check if specific due dates fall in this month.
-      // Since we don't have full recurrence rules, we'll use a simplified model:
-      // - Monthly: Add cost
-      // - Yearly: Add cost ONLY if it's the current month (mock logic for demo) 
-      //   OR spread it out? Real cashflow implies "When does the money leave?"
-      //   Let's assume "Cash Flow" view:
-      
-      let hitsThisMonth = false;
-      if (sub.billingCycle === 'monthly') hitsThisMonth = true;
-      else if (sub.billingCycle === 'yearly') {
-        const nextPay = new Date(sub.nextPaymentDate);
-        if (nextPay.getMonth() === date.getMonth()) hitsThisMonth = true;
+      const subStart = new Date(sub.startDate);
+      const subStartYearMonth = subStart.getFullYear() * 12 + subStart.getMonth();
+      const dateYearMonth = date.getFullYear() * 12 + date.getMonth();
+
+      if (subStartYearMonth <= dateYearMonth) {
+        const monthlyCost = normalizeMonthlyCost(sub.cost, sub.billingCycle);
+        const convertedCost = convertSubCost(sub, monthlyCost);
+        return sum + convertedCost;
       }
-      
-      return sum + (hitsThisMonth ? sub.cost : 0);
+      return sum;
     }, 0);
 
-    return { name: monthName, total: monthTotal };
+    return { name: monthName, total: Math.round(monthTotal * 100) / 100 };
   });
 
   const formatCurrency = (val: number) => 
@@ -113,11 +150,31 @@ export function StatsOverview({
   const StatIcon3 = stats[3].icon;
 
   return (
-    <MagicBento 
-      className="grid grid-cols-1 md:grid-cols-4 gap-4 w-full"
-      enableTilt={false}       // Disable tilt as requested
-      enableMagnetism={false} // Disable magnetism as requested
-    >
+    <div className="space-y-4">
+      {/* Currency Selector */}
+      {onCurrencyChange && (
+        <div className="flex items-center justify-end gap-2">
+          <Globe className="size-4 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">Display Currency:</span>
+          <select
+            value={currency}
+            onChange={(e) => onCurrencyChange(e.target.value)}
+            className="h-8 rounded-md border border-white/10 bg-white/5 px-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+          >
+            {CURRENCIES.map((c) => (
+              <option key={c.value} value={c.value} className="bg-background text-foreground">
+                {c.symbol} {c.value}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      <MagicBento
+        className="grid grid-cols-1 md:grid-cols-4 gap-4 w-full"
+        enableTilt={false}
+        enableMagnetism={false}
+      >
       {/* 
         LAYOUT STRATEGY:
         Left Column (Cols 1-2):
@@ -259,13 +316,13 @@ export function StatsOverview({
                         tickLine={false} 
                         axisLine={false} 
                     />
-                    <YAxis 
-                        stroke="#525252" 
-                        fontSize={12} 
-                        tickLine={false} 
-                        axisLine={false} 
-                        tickFormatter={(value) => `$${value}`} 
-                        width={60}
+                    <YAxis
+                        stroke="#525252"
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(value) => `${currencyInfo.symbol}${value}`}
+                        width={70}
                     />
                     <Tooltip 
                         contentStyle={{ backgroundColor: '#171717', border: '1px solid #262626', borderRadius: '8px' }}
@@ -323,5 +380,6 @@ export function StatsOverview({
       </ParticleCard>
 
     </MagicBento>
+    </div>
   );
 }
